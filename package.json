@@ -1,37 +1,118 @@
 {
-  "name": "@shieldlabs/next",
-  "version": "0.0.0",
-  "description": "Next.js integration for the ShieldLabs browser loader.",
+  "name": "@shieldlabs-ai/next",
+  "version": "1.0.0",
+  "description": "Next.js integration for ShieldLabs device intelligence: the React provider and hooks as a client module, and server helpers that read identifications and verify signed webhooks in the Node.js and Edge runtimes.",
+  "keywords": [
+    "shieldlabs",
+    "nextjs",
+    "next",
+    "react",
+    "app-router",
+    "edge-runtime",
+    "device-intelligence",
+    "fraud-detection",
+    "risk-score",
+    "identification",
+    "webhooks"
+  ],
+  "homepage": "https://docs.shieldlabs.ai",
+  "bugs": {
+    "url": "https://github.com/ShieldLabs-ai/shieldlabs-next/issues",
+    "email": "contact@shieldlabs.ai"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ShieldLabs-ai/shieldlabs-next.git"
+  },
+  "license": "MIT",
+  "author": "ShieldLabs Inc. <contact@shieldlabs.ai>",
   "type": "module",
+  "sideEffects": false,
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./server": {
+      "import": {
+        "types": "./dist/server.d.ts",
+        "default": "./dist/server.js"
+      },
+      "require": {
+        "types": "./dist/server.d.cts",
+        "default": "./dist/server.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "typesVersions": {
+    "*": {
+      "server": [
+        "./dist/server.d.ts"
+      ]
     }
   },
-  "files": ["dist", "README.md", "LICENSE"],
-  "sideEffects": false,
-  "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts --clean",
-    "typecheck": "tsc --noEmit"
+  "files": [
+    "dist",
+    "CHANGELOG.md"
+  ],
+  "engines": {
+    "node": ">=18.17"
   },
-  "keywords": ["shieldlabs", "nextjs", "device-intelligence", "visitor-identification", "risk-score"],
-  "repository": { "type": "git", "url": "git+https://github.com/ShieldLabs-ai/shieldlabs-next.git" },
-  "homepage": "https://shieldlabs.ai",
-  "bugs": { "url": "https://github.com/ShieldLabs-ai/shieldlabs-next/issues" },
-  "license": "MIT",
-  "publishConfig": { "access": "public" },
-  "peerDependencies": { "next": ">=13", "react": ">=17" },
-  "dependencies": { "@shieldlabs/js": "workspace:*", "@shieldlabs/react": "workspace:*" },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "prebuild": "node scripts/check-peers.mjs",
+    "build": "node scripts/clean.mjs && tsup",
+    "pretypecheck": "node scripts/check-peers.mjs",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.build.json",
+    "prelint": "node scripts/check-peers.mjs",
+    "lint": "eslint .",
+    "pretest": "npm run build",
+    "test": "vitest run",
+    "prepack": "npm run build"
+  },
+  "peerDependencies": {
+    "@shieldlabs-ai/js": "^1.0.0",
+    "@shieldlabs-ai/node": "^1.0.0",
+    "@shieldlabs-ai/react": "^1.0.0",
+    "next": "^14.0.0 || ^15.0.0 || ^16.0.0",
+    "react": "^18.0.0 || ^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "next": {
+      "optional": true
+    }
+  },
   "devDependencies": {
-    "next": "^14.2.0",
-    "react": "^18.2.0",
-    "@types/react": "^18.2.0",
-    "tsup": "^8.0.0",
-    "typescript": "^5.4.0"
+    "@eslint/js": "~9.39.5",
+    "@types/node": "^20.19.43",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitest/coverage-v8": "^4.1.11",
+    "esbuild": "^0.28.2",
+    "eslint": "~9.39.5",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "tsup": "^8.5.1",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.71.0",
+    "vite": "~6.4.3",
+    "vitest": "^4.1.11"
+  },
+  "overrides": {
+    "tsup": {
+      "esbuild": "$esbuild"
+    }
   }
 }

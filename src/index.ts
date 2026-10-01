@@ -1,9 +1,26 @@
 /**
- * @shieldlabs/next — Next.js integration for the ShieldLabs browser loader.
- * Re-exports the React bindings and adds a <ShieldLabsScript /> helper.
- * No signal-collection logic lives here.
+ * @shieldlabs-ai/next: the client entry.
  *
- * Status: pre-launch scaffold. Surface is a placeholder.
+ * The React provider and hooks of @shieldlabs-ai/react as a client module (the built files start with
+ * "use client"), so the root layout of the App Router, a Server Component, can render
+ * `<ShieldLabsProvider>`. Server helpers live in `@shieldlabs-ai/next/server`.
+ *
+ * Named re-exports only: Next.js does not allow `export *` in a client module.
  */
-export type { IdentificationResult, ShieldLabsOptions } from "@shieldlabs/js";
-export { useShieldLabs } from "@shieldlabs/react";
+export { ShieldLabsProvider, useIdentify, useShieldLabs } from '@shieldlabs-ai/react';
+export type {
+  ShieldLabsProviderProps,
+  ShieldLabsStatus,
+  UseIdentifyOptions,
+  UseIdentifyResult,
+  UseShieldLabsResult,
+} from '@shieldlabs-ai/react';
+export { ShieldLabsError } from '@shieldlabs-ai/js';
+export type {
+  IdentifyOptions,
+  IdentifyResult,
+  InteractionIdentifier,
+  LoadOptions,
+  ShieldLabsAgent,
+  ShieldLabsErrorCode,
+} from '@shieldlabs-ai/js';
