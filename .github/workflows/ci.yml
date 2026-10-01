@@ -1,0 +1,148 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  NEXT_TELEMETRY_DISABLED: 1
+
+# @shieldlabs-ai/js, @shieldlabs-ai/react and @shieldlabs-ai/node (peer dependencies) are not on npm yet: every
+# job builds them from the main branch of their repositories and installs the packs without saving
+# them (see CONTRIBUTING.md). Actions are pinned to full commit SHAs; the comment names the release.
+
+jobs:
+  test:
+    name: Test (Node.js ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [20, 22, 24]
+    defaults:
+      run:
+        working-directory: shieldlabs-next
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          path: shieldlabs-next
+          persist-credentials: false
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          repository: ShieldLabs-ai/shieldlabs-js
+          ref: main
+          path: shieldlabs-js
+          persist-credentials: false
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          repository: ShieldLabs-ai/shieldlabs-react
+          ref: main
+          path: shieldlabs-react
+          persist-credentials: false
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          repository: ShieldLabs-ai/shieldlabs-node
+          ref: main
+          path: shieldlabs-node
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+          cache-dependency-path: |
+            shieldlabs-next/package-lock.json
+            shieldlabs-js/package-lock.json
+            shieldlabs-react/package-lock.json
+            shieldlabs-node/package-lock.json
+      - name: Build and pack @shieldlabs-ai/js, @shieldlabs-ai/react and @shieldlabs-ai/node
+        working-directory: .
+        run: |
+          (cd shieldlabs-js && npm ci && npm run build && npm pack)
+          (cd shieldlabs-react && npm ci && npm install --no-save ../shieldlabs-js/shieldlabs-ai-js-*.tgz && npm run build && npm pack)
+          (cd shieldlabs-node && npm ci && npm pack)
+      - run: npm ci
+      - name: Install the packs
+        run: |
+          npm install --no-save --legacy-peer-deps=false ../shieldlabs-js/shieldlabs-ai-js-*.tgz \
+            ../shieldlabs-react/shieldlabs-ai-react-*.tgz ../shieldlabs-node/shieldlabs-ai-node-*.tgz
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test -- --coverage
+      - run: npm run build
+
+  example:
+    name: App Router example (Next.js ${{ matrix.next }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - next: '14'
+            packages: next@14 react@18 react-dom@18 @types/react@18 @types/react-dom@18
+          - next: '15'
+            packages: next@15 react@19 react-dom@19 @types/react@19 @types/react-dom@19
+          - next: latest
+            packages: next@latest react@latest react-dom@latest @types/react@latest @types/react-dom@latest
+    defaults:
+      run:
+        working-directory: shieldlabs-next
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          path: shieldlabs-next
+          persist-credentials: false
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          repository: ShieldLabs-ai/shieldlabs-js
+          ref: main
+          path: shieldlabs-js
+          persist-credentials: false
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          repository: ShieldLabs-ai/shieldlabs-react
+          ref: main
+          path: shieldlabs-react
+          persist-credentials: false
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          repository: ShieldLabs-ai/shieldlabs-node
+          ref: main
+          path: shieldlabs-node
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            shieldlabs-next/package-lock.json
+            shieldlabs-js/package-lock.json
+            shieldlabs-react/package-lock.json
+            shieldlabs-node/package-lock.json
+      - name: Build and pack @shieldlabs-ai/js, @shieldlabs-ai/react and @shieldlabs-ai/node
+        working-directory: .
+        run: |
+          (cd shieldlabs-js && npm ci && npm run build && npm pack)
+          (cd shieldlabs-react && npm ci && npm install --no-save ../shieldlabs-js/shieldlabs-ai-js-*.tgz && npm run build && npm pack)
+          (cd shieldlabs-node && npm ci && npm pack)
+      - run: npm ci
+      - name: Install the packs and pack @shieldlabs-ai/next
+        run: |
+          npm install --no-save --legacy-peer-deps=false ../shieldlabs-js/shieldlabs-ai-js-*.tgz \
+            ../shieldlabs-react/shieldlabs-ai-react-*.tgz ../shieldlabs-node/shieldlabs-ai-node-*.tgz
+          npm pack
+      - name: Build examples/app-router with Next.js ${{ matrix.next }}
+        working-directory: shieldlabs-next/examples/app-router
+        env:
+          PACKAGES: ${{ matrix.packages }}
+          NEXT_PUBLIC_SHIELDLABS_PUBLIC_KEY: 0123456789abcdef0123456789abcdef
+        run: |
+          # $PACKAGES is split into separate arguments on purpose.
+          npm install --no-save --no-package-lock ../../shieldlabs-ai-next-*.tgz \
+            ../../../shieldlabs-js/shieldlabs-ai-js-*.tgz ../../../shieldlabs-react/shieldlabs-ai-react-*.tgz \
+            ../../../shieldlabs-node/shieldlabs-ai-node-*.tgz $PACKAGES
+          node -p "'Next.js ' + require('next/package.json').version + ', React ' + require('react/package.json').version"
+          npm run build

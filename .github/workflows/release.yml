@@ -1,0 +1,93 @@
+name: Release
+
+# Publishes @shieldlabs-ai/next to npm when a maintainer pushes a tag such as v1.0.0. The first job runs
+# every check against the published peer dependencies and packs the package, with read-only
+# permissions; the second publishes that tarball with provenance (environment "npm", NPM_TOKEN
+# secret). Safe to re-run: a version that is already on npm is skipped. Actions are pinned to full
+# commit SHAs; the comment names the release.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Check and pack
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 22
+          cache: npm
+      - name: Check that the tag matches package.json
+        id: version
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          if [ "v${version}" != "${GITHUB_REF_NAME}" ]; then
+            echo "::error::The tag ${GITHUB_REF_NAME} does not match the package.json version ${version}."
+            exit 1
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+      # Apps install @shieldlabs-ai/next next to these packages, so they are published first. When one is
+      # missing, publish it and re-run this workflow.
+      - name: Check that the ShieldLabs peer dependencies are on npm
+        run: |
+          for name in @shieldlabs-ai/js @shieldlabs-ai/react @shieldlabs-ai/node; do
+            range="$(node -p "require('./package.json').peerDependencies['${name}']")"
+            if [ -z "$(npm view "${name}@${range}" version 2>/dev/null)" ]; then
+              echo "::error::${name}@${range} is not on npm. Publish it first, then re-run this workflow."
+              exit 1
+            fi
+          done
+      - run: npm ci
+      - name: Install the published peer dependencies
+        run: |
+          peer() { node -p "'$1@' + require('./package.json').peerDependencies['$1']"; }
+          npm install --no-save --legacy-peer-deps=false \
+            "$(peer @shieldlabs-ai/js)" "$(peer @shieldlabs-ai/react)" "$(peer @shieldlabs-ai/node)"
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test -- --coverage
+      - run: npm run build
+      - run: npm pack
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: package
+          path: shieldlabs-ai-next-${{ steps.version.outputs.version }}.tgz
+          if-no-files-found: error
+          overwrite: true
+
+  publish:
+    name: Publish to npm
+    needs: build
+    runs-on: ubuntu-latest
+    # Add required reviewers to this environment (Settings > Environments) to approve each release.
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write # npm provenance
+    steps:
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: package
+      - name: Publish, unless this version is already on npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          if [ "$(npm view "@shieldlabs-ai/next@${VERSION}" version 2>/dev/null)" = "${VERSION}" ]; then
+            echo "@shieldlabs-ai/next@${VERSION} is already on npm: nothing to publish."
+          else
+            npm publish "./shieldlabs-ai-next-${VERSION}.tgz" --provenance --access public
+          fi
