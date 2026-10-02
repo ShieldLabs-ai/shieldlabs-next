@@ -4,45 +4,30 @@ Thank you for improving the ShieldLabs Next.js integration.
 
 ## Set up
 
-You need Node.js 20 or later. The package builds on three other ShieldLabs packages, which are its
-peer dependencies: `@shieldlabs-ai/react`, `@shieldlabs-ai/js` and `@shieldlabs-ai/node`. Until they are
-published to npm, work with local packs of them, built from working copies of
-[shieldlabs-js](https://github.com/ShieldLabs-ai/shieldlabs-js),
-[shieldlabs-react](https://github.com/ShieldLabs-ai/shieldlabs-react) and
-[shieldlabs-node](https://github.com/ShieldLabs-ai/shieldlabs-node) next to this repository:
+You need Node.js 20 or later. Install the development tools and the published peer packages
+`@shieldlabs-ai/react`, `@shieldlabs-ai/js` and `@shieldlabs-ai/node` from this repository's root.
+You do not need checkouts of the other SDKs.
 
 ```bash
-# in shieldlabs-js
-npm ci && npm run build && npm pack
-# in shieldlabs-react
-npm ci && npm install --no-save ../shieldlabs-js/shieldlabs-ai-js-1.0.0.tgz && npm run build && npm pack
-# in shieldlabs-node
-npm ci && npm pack
-
-# in this repository
 npm ci
-npm install --no-save --legacy-peer-deps=false ../shieldlabs-js/shieldlabs-ai-js-1.0.0.tgz \
-  ../shieldlabs-react/shieldlabs-ai-react-1.0.0.tgz ../shieldlabs-node/shieldlabs-ai-node-1.0.0.tgz
+npm install --no-save --legacy-peer-deps=false '@shieldlabs-ai/js@^1.0.0' \
+  '@shieldlabs-ai/react@^1.0.0' '@shieldlabs-ai/node@^1.0.0'
 ```
 
-Repeat the last command after every `npm ci`. When the packs are missing, `npm run typecheck`,
-`npm run lint` and `npm run build` stop with these instructions (`scripts/check-peers.mjs`). Never
-commit a `file:` dependency or a tarball.
+Repeat the second command after every `npm ci`, which removes the separately installed peers.
+`--no-save` leaves `package.json` and `package-lock.json` unchanged. If a check reports missing
+peers, run that command again.
 
-### Why `.npmrc` sets `legacy-peer-deps=true` for now
+### Why `.npmrc` sets `legacy-peer-deps=true`
 
-`package.json` lists the three ShieldLabs packages as peer dependencies, because apps install them
-next to this package. npm installs peer dependencies automatically and would try to download them
-from the registry, where they do not exist yet, so `npm ci` would fail. `legacy-peer-deps=true` in
-`.npmrc` makes npm skip peer dependencies; it applies to work in this repository only and is not
-published. The same setting would make npm leave out the packs, whose names match peer
-dependencies, so their install command turns it off with `--legacy-peer-deps=false`. `--no-save`
-keeps `package.json` and `package-lock.json` unchanged. The release workflow installs the published
-packages the same way, so a release needs no change to `.npmrc` or `package.json`.
+The lockfile was created with `legacy-peer-deps=true`; the repository keeps that setting for
+`npm ci`. The separate install uses `--legacy-peer-deps=false` to resolve the published peers.
+This setting applies only to this checkout: npm does not publish `.npmrc`.
 
-Once the three packages are on npm: delete `.npmrc`, add them to `devDependencies`, run
-`npm install` to refresh `package-lock.json`, and remove the pack steps from this file, from
-`examples/app-router/README.md` and from `.github/workflows/ci.yml`.
+CI still builds the peer packages from their `main` branches and tests the packed copies. The
+commands above instead test the published 1.x packages. To test a peer change, build and pack it
+in its own checkout, then replace its package name in the second command with the path to that
+tarball. Install all three peers in the same command. Never commit a `file:` dependency or a tarball.
 
 ## Checks
 
@@ -93,9 +78,8 @@ are on npm, installs the published versions, runs all checks, packs the package 
 pack to npm with provenance, using the `NPM_TOKEN` repository secret. The publish job runs in the
 `npm` environment: add required reviewers to it in the repository settings to approve each release.
 
-Re-running the workflow is safe. When it stopped because a peer dependency was not on npm yet,
-publish that package and re-run the workflow; a version that is already on npm is not published
-again.
+Re-running the workflow is safe: a version that is already on npm is not published again. If a
+release requires newer peer versions, publish those versions before re-running the workflow.
 
 ## Security
 
