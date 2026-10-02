@@ -6,6 +6,11 @@ All notable changes to `@shieldlabs-ai/next` are documented in this file. The fo
 
 ## [Unreleased]
 
+### Changed
+
+- Contributor and example setup uses published ShieldLabs peers from npm. Local tarballs remain
+  optional for testing changes; a checkout of another SDK is no longer required.
+
 ## [1.0.0] - 2026-09-30
 
 ### Added

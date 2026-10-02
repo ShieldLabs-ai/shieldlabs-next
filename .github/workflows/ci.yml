@@ -11,9 +11,9 @@ permissions:
 env:
   NEXT_TELEMETRY_DISABLED: 1
 
-# @shieldlabs-ai/js, @shieldlabs-ai/react and @shieldlabs-ai/node (peer dependencies) are not on npm yet: every
-# job builds them from the main branch of their repositories and installs the packs without saving
-# them (see CONTRIBUTING.md). Actions are pinned to full commit SHAs; the comment names the release.
+# Every job builds @shieldlabs-ai/js, @shieldlabs-ai/react and @shieldlabs-ai/node from the main branch
+# of their repositories and installs the packs without saving them. Local setup can use published
+# peers (see CONTRIBUTING.md). Actions are pinned to full commit SHAs; the comment names the release.
 
 jobs:
   test:

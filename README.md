@@ -859,11 +859,13 @@ value or a `ValidationError` for 500).
 
 ## Development
 
+From the repository root, install the development tools and the published peer packages. No sibling
+repositories are required. Repeat the peer install after each `npm ci`.
+
 ```bash
 npm ci
-# Until the other ShieldLabs packages are on npm, install local packs of them (see CONTRIBUTING.md):
-npm install --no-save --legacy-peer-deps=false ../shieldlabs-js/shieldlabs-ai-js-1.0.0.tgz \
-  ../shieldlabs-react/shieldlabs-ai-react-1.0.0.tgz ../shieldlabs-node/shieldlabs-ai-node-1.0.0.tgz
+npm install --no-save --legacy-peer-deps=false '@shieldlabs-ai/js@^1.0.0' \
+  '@shieldlabs-ai/react@^1.0.0' '@shieldlabs-ai/node@^1.0.0'
 npm run typecheck
 npm run lint
 npm test -- --coverage   # builds first, then runs the tests

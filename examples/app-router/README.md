@@ -35,6 +35,8 @@ its matcher (see [Receive webhooks in a route handler](../../README.md#receive-w
 
 ## Run it
 
+From this example directory, install the published packages from npm:
+
 ```bash
 npm install
 cp .env.example .env.local   # then fill in the keys of your domain
@@ -53,27 +55,24 @@ route answers the `webhook.ping` with 200, and the Test delivery shows up in the
 
 ## Build against local copies of the packages
 
-Before the ShieldLabs packages are on npm, with the repositories `shieldlabs-js`, `shieldlabs-react`,
-`shieldlabs-node` and `shieldlabs-next` side by side:
+Use the published peer packages and a tarball of this checkout to test changes to the Next.js
+integration:
 
 ```bash
-# in shieldlabs-js
-npm ci && npm run build && npm pack
-# in shieldlabs-react
-npm ci && npm install --no-save ../shieldlabs-js/shieldlabs-ai-js-1.0.0.tgz && npm run build && npm pack
-# in shieldlabs-node
-npm ci && npm pack
-# in shieldlabs-next
+# repository root
 npm ci
-npm install --no-save --legacy-peer-deps=false ../shieldlabs-js/shieldlabs-ai-js-1.0.0.tgz \
-  ../shieldlabs-react/shieldlabs-ai-react-1.0.0.tgz ../shieldlabs-node/shieldlabs-ai-node-1.0.0.tgz
+npm install --no-save --legacy-peer-deps=false '@shieldlabs-ai/js@^1.0.0' \
+  '@shieldlabs-ai/react@^1.0.0' '@shieldlabs-ai/node@^1.0.0'
 npm pack
-# in shieldlabs-next/examples/app-router
-npm install --no-save --no-package-lock ../../shieldlabs-ai-next-1.0.0.tgz \
-  ../../../shieldlabs-js/shieldlabs-ai-js-1.0.0.tgz ../../../shieldlabs-react/shieldlabs-ai-react-1.0.0.tgz \
-  ../../../shieldlabs-node/shieldlabs-ai-node-1.0.0.tgz
+cd examples/app-router
+npm install --no-save --no-package-lock ../../shieldlabs-ai-next-1.0.0.tgz
 npm run build
 ```
+
+Adjust the tarball filename if the package version changes. To test a peer change as well, build
+and pack it in its own checkout. Replace its package name in the root install command with that
+tarball, and include the tarball in the example install too. Never commit a tarball or a `file:`
+dependency.
 
 To build with Next.js 14, add `next@14 react@18 react-dom@18 @types/react@18 @types/react-dom@18` to
 the last `npm install`. Next.js 14 sets `"jsx": "preserve"` in `tsconfig.json` during the build;
