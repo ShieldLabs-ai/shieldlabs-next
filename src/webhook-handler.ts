@@ -39,7 +39,7 @@ export interface WebhookHandlerOptions {
    * returned value (or promise) resolves, and 500 when it throws or rejects. Today each
    * identification is delivered once per endpoint, with a 1-second timeout and no retries; a later
    * server release adds retries that resend identical bytes. Keep it short and idempotent on
-   * `event.data.request_id`.
+   * `event.data.identification_id`.
    */
   onEvent: (event: WebhookHandlerEvent) => unknown;
   /**

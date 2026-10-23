@@ -88,7 +88,7 @@ describe('createWebhookHandler: deliveries', () => {
     expect(event.schema_version).toBe('2026-06-01');
     expect(event.created_at).toBe('2026-09-30T12:34:57.482913041Z');
     expect(event.data).toMatchObject({
-      request_id: '02f1d973-84db-4156-a7f7-e799e6bf389b',
+      identification_id: '02f1d973-84db-4156-a7f7-e799e6bf389b',
       device_id: 'ac7c303d-971b-41d1-8e25-cd5b46b46aed',
       user_hid: '9f86d081884c7d659a2feaa0c55ad015',
       public_ip: { ip: '203.0.113.24', country: 'Netherlands' },
@@ -133,11 +133,15 @@ describe('createWebhookHandler: deliveries', () => {
     expect((await handler(signedRequest(compact('webhook-test-delivery.json')))).status).toBe(200);
     const event = onlyEvent(onEvent);
     if (event.event_type !== 'identification.scored') throw new Error('expected a scored event');
-    expect(event.data.request_id).toBe('13f84f05-7c2a-4e9b-9f1d-2a6b8c0e4d11');
+    expect(event.data.identification_id).toBe('13f84f05-7c2a-4e9b-9f1d-2a6b8c0e4d11');
     expect(event.data.user_hid).toBeNull();
     expect(event.data.detection_flags.browser_automation).toBe(false);
     expect(event.data.detection_flags.search_bot).toBe(false);
-    expect(Object.keys(event.data.detection_flags)).toHaveLength(19);
+    expect(event.data.detection_flags.ai_bot).toBe(false);
+    expect(event.data.detection_flags.ai_browser).toBe(false);
+    expect(event.data.detection_flags.device_spoofing).toBe(false);
+    expect(event.data.detection_flags.ws_tcp_latency).toBe(false);
+    expect(Object.keys(event.data.detection_flags)).toHaveLength(20);
   });
 
   it('passes an event type this version does not know to onEvent', async () => {
@@ -384,7 +388,7 @@ describe('createWebhookHandler: body size', () => {
     expect((await handler(request)).status).toBe(200);
     const event = onlyEvent(onEvent);
     if (event.event_type !== 'identification.scored') throw new Error('expected a scored event');
-    expect(event.data.request_id).toBe('02f1d973-84db-4156-a7f7-e799e6bf389b');
+    expect(event.data.identification_id).toBe('02f1d973-84db-4156-a7f7-e799e6bf389b');
 
     const smaller = setup({ secret: SECRET, maxBodySize: bytes.byteLength - 1 });
     expect((await smaller.handler(signedRequest(SCORED))).status).toBe(413);

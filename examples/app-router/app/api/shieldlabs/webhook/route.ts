@@ -10,7 +10,7 @@ import { createWebhookHandler, riskBand, type DetectionFlags } from '@shieldlabs
 
 // Request IDs this instance has handled. Today each identification is delivered once per endpoint
 // (1-second timeout, no retries). A later server release adds retries that resend identical bytes, so
-// handlers are idempotent on data.request_id. In production, use a shared store, for example a unique
+// handlers are idempotent on data.identification_id. In production, use a shared store, for example a unique
 // key in your database.
 const handled = new Set<string>();
 
@@ -21,13 +21,13 @@ export const POST = createWebhookHandler({
     // An event type this version does not know yet is acknowledged and skipped.
     if (event.event_type !== 'identification.scored') return;
 
-    const { request_id, risk_score, detection_flags } = event.data;
-    if (handled.has(request_id)) return;
+    const { identification_id, risk_score, detection_flags } = event.data;
+    if (handled.has(identification_id)) return;
     if (handled.size >= 10_000) handled.clear();
-    handled.add(request_id);
+    handled.add(identification_id);
 
     // Deliveries time out after 1 second: store the verdict or queue the work, and answer.
     const flags = (Object.keys(detection_flags) as (keyof DetectionFlags)[]).filter((flag) => detection_flags[flag]);
-    console.info('[shieldlabs webhook]', request_id, risk_score, riskBand(risk_score), flags.join(', ') || 'no flags');
+    console.info('[shieldlabs webhook]', identification_id, risk_score, riskBand(risk_score), flags.join(', ') || 'no flags');
   },
 });

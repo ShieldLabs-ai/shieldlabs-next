@@ -61,7 +61,7 @@ export function signedRequest(body: string, secret: string = SECRET): Request {
 }
 
 export interface HistoryRow {
-  request_id: string;
+  identification_id: string;
   [key: string]: unknown;
 }
 
