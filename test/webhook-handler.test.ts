@@ -137,7 +137,11 @@ describe('createWebhookHandler: deliveries', () => {
     expect(event.data.user_hid).toBeNull();
     expect(event.data.detection_flags.browser_automation).toBe(false);
     expect(event.data.detection_flags.search_bot).toBe(false);
-    expect(Object.keys(event.data.detection_flags)).toHaveLength(19);
+    expect(event.data.detection_flags.ai_bot).toBe(false);
+    expect(event.data.detection_flags.ai_browser).toBe(false);
+    expect(event.data.detection_flags.device_spoofing).toBe(false);
+    expect(event.data.detection_flags.ws_tcp_latency).toBe(false);
+    expect(Object.keys(event.data.detection_flags)).toHaveLength(20);
   });
 
   it('passes an event type this version does not know to onEvent', async () => {
