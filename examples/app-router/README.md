@@ -5,9 +5,9 @@ A signup flow with `@shieldlabs-ai/next` in the App Router:
 | File | What it does |
 |---|---|
 | `app/layout.tsx` | Renders `ShieldLabsProvider` with the Public Key from `NEXT_PUBLIC_SHIELDLABS_PUBLIC_KEY` |
-| `app/signup/page.tsx` | A client component that gets the agent with `getAgent()` from `useShieldLabs()`, arms the form with `agent.identifyOnInteraction(form)` and sends the `requestId` with the submit |
+| `app/signup/page.tsx` | A client component that gets the agent with `getAgent()` from `useShieldLabs()`, arms the form with `agent.identifyOnInteraction(form)` and sends the `identificationId` with the submit |
 | `app/signup/actions.ts` | A Server Action that reads the verdict with `getIdentification()`, applies `evaluateIdentification()` and refuses a request ID that was already used |
-| `lib/request-ids.ts` | `markRequestIdUsed()`: records a request ID and resolves to `true` only the first time |
+| `lib/request-ids.ts` | `markIdentificationIdUsed()`: records a request ID and resolves to `true` only the first time |
 | `app/api/shieldlabs/webhook/route.ts` | A route handler made with `createWebhookHandler()`, in the Node.js runtime, that logs every scored identification once |
 
 The first focus, click or key press in the form starts an identification, so it is usually finished
@@ -19,7 +19,7 @@ at most one attempt every five seconds; each one is billable. When the agent cou
 the submit handler calls `identify()` from `useIdentify()`, which loads it again and resolves `null`
 when there is still no identification.
 
-The Server Action records the request ID with `markRequestIdUsed()` before it applies the policy, and
+The Server Action records the request ID with `markIdentificationIdUsed()` before it applies the policy, and
 passes the answer to `isReplay`. It refuses a missing, reused or stale identification, the rate-limit
 marker, missing device signals, browser automation or disabled JavaScript, and the dangerous band (the
 defaults of `evaluateIdentification()`, a starting point to tune). The browser only learns whether the

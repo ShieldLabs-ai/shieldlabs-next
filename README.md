@@ -24,8 +24,8 @@ contains the Public Key).
 
 1. **Browser.** `ShieldLabsProvider` in your root layout loads the agent once, and `useIdentify()`
    runs an identification when the user begins a protected action (signup, login, checkout). The page
-   receives a `requestId` and sends it with the action.
-2. **Your backend.** A Server Action or route handler calls `getIdentification(requestId)` from
+   receives a `identificationId` and sends it with the action.
+2. **Your backend.** A Server Action or route handler calls `getIdentification(identificationId)` from
    `@shieldlabs-ai/next/server` to read the verdict from the History API, or a route handler made with
    `createWebhookHandler()` receives it in a signed `identification.scored` webhook.
 3. **Decision.** Your server acts on the Risk Score (bands: trusted 0-29, suspicious 30-59,
@@ -58,7 +58,7 @@ SHIELDLABS_WEBHOOK_SECRET=whsec_your_signing_secret
 
 ## Quick start
 
-With the App Router: a provider in the root layout, a signup page whose form sends a `requestId`, a
+With the App Router: a provider in the root layout, a signup page whose form sends a `identificationId`, a
 Server Action that reads the verdict, a store for used request IDs, and a route handler for webhooks.
 The imports use the `@/` alias that `create-next-app` sets up.
 
@@ -112,7 +112,7 @@ export function SignupForm() {
     // null when there is no identification (a content blocker, a timeout): the signup goes out
     // anyway, and the Server Action treats it as unverified.
     const result = await identify();
-    if (result) formData.set('requestId', result.requestId);
+    if (result) formData.set('identificationId', result.identificationId);
     const { ok } = await signup(formData);
     setMessage(ok ? 'Account created.' : 'We could not create your account.');
   }
@@ -132,15 +132,15 @@ export function SignupForm() {
 'use server';
 
 import { evaluateIdentification, getIdentification, type Identification } from '@shieldlabs-ai/next/server';
-import { markRequestIdUsed } from '@/lib/request-ids';
+import { markIdentificationIdUsed } from '@/lib/request-ids';
 
 export async function signup(formData: FormData): Promise<{ ok: boolean }> {
-  const requestId = formData.get('requestId');
+  const identificationId = formData.get('identificationId');
   let identification: Identification | null = null;
-  if (typeof requestId === 'string' && requestId !== '') {
+  if (typeof identificationId === 'string' && identificationId !== '') {
     try {
       // Waits until ShieldLabs has stored the verdict, for up to 10 seconds.
-      identification = await getIdentification(requestId);
+      identification = await getIdentification(identificationId);
     } catch (error) {
       console.error('ShieldLabs verdict unavailable:', error); // a malformed ID, a wrong key, a network error
     }
@@ -148,7 +148,7 @@ export async function signup(formData: FormData): Promise<{ ok: boolean }> {
 
   // One identification authorizes one attempt: record its request ID first (the store is
   // asynchronous), then hand the answer to isReplay, which must answer synchronously.
-  const firstUse = identification !== null && (await markRequestIdUsed(identification.request_id));
+  const firstUse = identification !== null && (await markIdentificationIdUsed(identification.identification_id));
 
   // Refuses a missing, reused or stale identification, the rate-limit marker, missing device signals,
   // browser automation or disabled JavaScript, and the dangerous band.
@@ -167,11 +167,11 @@ export async function signup(formData: FormData): Promise<{ ok: boolean }> {
 const used = new Map<string, number>();
 
 /** Records a request ID. Resolves to true the first time, and to false for every repeat. */
-export async function markRequestIdUsed(requestId: string): Promise<boolean> {
+export async function markIdentificationIdUsed(identificationId: string): Promise<boolean> {
   const now = Date.now();
   for (const [id, forgetAt] of used) if (forgetAt <= now) used.delete(id);
-  if (used.has(requestId)) return false;
-  used.set(requestId, now + 10 * 60 * 1000); // twice the 5-minute freshness window
+  if (used.has(identificationId)) return false;
+  used.set(identificationId, now + 10 * 60 * 1000); // twice the 5-minute freshness window
   return true;
 }
 ```
@@ -185,7 +185,7 @@ export const POST = createWebhookHandler({
   onEvent(event) {
     if (event.event_type !== 'identification.scored') return;
     // Store the verdict here, keyed by request ID (an upsert), so a repeated delivery changes nothing.
-    console.info('ShieldLabs verdict', event.data.request_id, event.data.risk_score);
+    console.info('ShieldLabs verdict', event.data.identification_id, event.data.risk_score);
   },
 });
 ```
@@ -232,7 +232,7 @@ then the agent's answer.
 
 The History row of an identification appears about 1 to 3 seconds after the browser call, and it can
 be refined for up to about 10 seconds while follow-up checks finish. Start the identification when
-the user begins the action and send its `requestId` with the submit: by then the verdict is usually
+the user begins the action and send its `identificationId` with the submit: by then the verdict is usually
 stored, and `getIdentification()` returns at once.
 
 `getAgent()` from `useShieldLabs()` resolves the loaded agent of `@shieldlabs-ai/js`, and its
@@ -276,7 +276,7 @@ export function SignupForm() {
     // The early identification while it is fresh, otherwise a new one. Without an early handle,
     // identify() loads the agent again. Both give null when there is no identification.
     const result = early.current ? await early.current.take().catch(() => null) : await identify();
-    if (result) formData.set('requestId', result.requestId);
+    if (result) formData.set('identificationId', result.identificationId);
     await signup(formData);
   }
 
@@ -306,7 +306,7 @@ billed. The effect's cleanup removes the listeners when the form unmounts.
 
 ### Read the verdict in a Server Action
 
-`getIdentification(requestId, options?)` reads the identification for a request ID from the History
+`getIdentification(identificationId, options?)` reads the identification for a request ID from the History
 API and returns an `Identification`, or `null` when none is found in time. It is
 `identifications.get()` of `@shieldlabs-ai/node` with a client created from `SHIELDLABS_API_KEY`:
 
@@ -335,7 +335,7 @@ Checks run in this order and the first failure wins:
 | Order | Check | `reason` |
 |---|---|---|
 | 1 | No identification (`null`) | `missing` |
-| 2 | `isReplay(requestId)` returns true | `replayed` |
+| 2 | `isReplay(identificationId)` returns true | `replayed` |
 | 3 | Older than `maxAge` (default 5 minutes, by `observed_at`) | `stale` |
 | 4 | Risk Score above 100 (the 999 rate-limit marker) | `rate_limited` |
 | 5 | All-zero device ID (no usable device signals) | `no_device_signals` |
@@ -349,12 +349,12 @@ expiry, a column with a unique index) answers with a promise. Record the request
 the answer, as the Quick start does:
 
 ```ts
-const firstUse = identification !== null && (await markRequestIdUsed(identification.request_id));
+const firstUse = identification !== null && (await markIdentificationIdUsed(identification.identification_id));
 const verdict = evaluateIdentification(identification, { isReplay: () => !firstUse });
 ```
 
-Never write `isReplay: (id) => !markRequestIdUsed(id)` with an asynchronous store: a promise is always
-truthy, so `isReplay` would return `false` for every repeat. Record `identification.request_id` (the ID
+Never write `isReplay: (id) => !markIdentificationIdUsed(id)` with an asynchronous store: a promise is always
+truthy, so `isReplay` would return `false` for every repeat. Record `identification.identification_id` (the ID
 as ShieldLabs stores it) rather than the value from the form, so the same identification sent in
 another letter case still counts as a repeat.
 
@@ -401,7 +401,7 @@ export function ChangeEmailForm({ userHid }: { userHid: string }) {
     const formData = new FormData(event.currentTarget);
     // null when there is no identification: the Server Action treats the change as unverified.
     const result = await identify();
-    if (result) formData.set('requestId', result.requestId);
+    if (result) formData.set('identificationId', result.identificationId);
     await changeEmail(formData);
   }
 
@@ -448,7 +448,7 @@ Response bodies are always these generic JSON objects and never include error de
   `UnknownWebhookEvent`, event types this version does not know yet: return to acknowledge them.
 - **Deliveries.** Today each identification is delivered once per endpoint, with a 1-second timeout
   and no retries. A later server release adds retries that resend identical bytes, so make `onEvent`
-  idempotent on `event.data.request_id`. A missed delivery is not sent again, so read the History API
+  idempotent on `event.data.identification_id`. A missed delivery is not sent again, so read the History API
   (`getIdentification()`) whenever you need a verdict for certain. It also holds the latest state: a
   History row can be refined after its webhook was sent, and the webhook is not sent again.
 - **Answer fast.** The handler answers after `onEvent` resolves, so keep it under the 1-second
@@ -537,7 +537,7 @@ const shieldlabs = new ShieldLabs({
   fetch: (url, init) => fetch(url, { ...init, cache: 'no-store' }),
 });
 
-const identification = await getIdentification(requestId, { client: shieldlabs, timeout: 5_000 });
+const identification = await getIdentification(identificationId, { client: shieldlabs, timeout: 5_000 });
 ```
 
 For History searches by device ID, User HID, visitor ID or IP (for example, how many accounts one
@@ -563,30 +563,30 @@ export default function App({ Component, pageProps }: AppProps) {
 }
 ```
 
-Pages call `useIdentify()` as in the App Router and send the `requestId` to an API route, which reads
+Pages call `useIdentify()` as in the App Router and send the `identificationId` to an API route, which reads
 the verdict. It uses `lib/request-ids.ts` from the [Quick start](#quick-start):
 
 ```ts
 // pages/api/signup.ts
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { evaluateIdentification, getIdentification, type Identification } from '@shieldlabs-ai/next/server';
-import { markRequestIdUsed } from '../../lib/request-ids';
+import { markIdentificationIdUsed } from '../../lib/request-ids';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).end();
-  const { requestId } = req.body as { requestId?: unknown };
+  const { identificationId } = req.body as { identificationId?: unknown };
 
   let identification: Identification | null = null;
-  if (typeof requestId === 'string' && requestId !== '') {
+  if (typeof identificationId === 'string' && identificationId !== '') {
     try {
-      identification = await getIdentification(requestId); // waits until the verdict is stored
+      identification = await getIdentification(identificationId); // waits until the verdict is stored
     } catch (error) {
       console.error('ShieldLabs verdict unavailable:', error);
     }
   }
 
   // Record the request ID first, then pass the answer: isReplay must answer synchronously.
-  const firstUse = identification !== null && (await markRequestIdUsed(identification.request_id));
+  const firstUse = identification !== null && (await markIdentificationIdUsed(identification.identification_id));
   const verdict = evaluateIdentification(identification, { isReplay: () => !firstUse });
   if (!verdict.ok) return res.status(403).json({ ok: false });
 
@@ -615,7 +615,7 @@ const handleWebhook = createWebhookHandler({
   onEvent(event) {
     if (event.event_type !== 'identification.scored') return;
     // Store the verdict here, keyed by request ID (an upsert), so a repeated delivery changes nothing.
-    console.info('ShieldLabs verdict', event.data.request_id, event.data.risk_score);
+    console.info('ShieldLabs verdict', event.data.identification_id, event.data.risk_score);
   },
 });
 
@@ -661,7 +661,7 @@ export const config = { runtime: 'edge' };
 
 export default createWebhookHandler({
   onEvent(event) {
-    if (event.event_type === 'identification.scored') console.info('ShieldLabs verdict', event.data.request_id);
+    if (event.event_type === 'identification.scored') console.info('ShieldLabs verdict', event.data.identification_id);
   },
 });
 ```
@@ -686,7 +686,7 @@ export default createWebhookHandler({
 ### Test on a registered domain
 
 ShieldLabs records identifications only for the domains registered in your account. On `localhost`
-the page still receives a `requestId`, but the identification is rejected and your backend never
+the page still receives a `identificationId`, but the identification is rejected and your backend never
 finds it (`getIdentification()` returns `null` after its timeout). Test on a development domain with
 its own keys. Webhook endpoints need a public `https` URL, so point a development endpoint at a
 deployed preview or a tunnel.
@@ -724,7 +724,7 @@ When the layout already knows the choice (for example from a cookie), pass it in
 waits for consent:
 
 - `identify()` from `useIdentify()` resolves `null` at once, with a `not_initialized` error, so forms
-  go out without a `requestId` and your server treats them as unverified. `runOnMount` ends the same
+  go out without a `identificationId` and your server treats them as unverified. `runOnMount` ends the same
   way and does not run again by itself after `load()`.
 - `useShieldLabs().identify()` rejects with `not_initialized`, and `check()` resolves `null`.
 - `getAgent()` waits, with no timeout of its own, so a form set up for early identification (see
@@ -774,7 +774,7 @@ handle that `identifyOnInteraction()` returns (`take()`, `dispose()`). The full 
 
 ### `@shieldlabs-ai/next/server`
 
-`getIdentification(requestId, options?): Promise<Identification | null>`
+`getIdentification(identificationId, options?): Promise<Identification | null>`
 
 | Option | Default | Description |
 |---|---|---|
@@ -817,7 +817,7 @@ countries, connection type, traffic source, Risk Score, risk signals, the 19 det
 **In the browser**, every error is a `ShieldLabsError` with a `code`. `identify()` from
 `useIdentify()` never rejects: it resolves `null` and puts the error in `error`. `identify()` and
 `getAgent()` from `useShieldLabs()`, and `take()` of an interaction handle, reject with it. Whenever
-there is no identification, send the action anyway without a `requestId`: your server treats it as
+there is no identification, send the action anyway without a `identificationId`: your server treats it as
 unverified (see [Errors and retries](https://github.com/ShieldLabs-ai/shieldlabs-react#errors-and-retries)
 of `@shieldlabs-ai/react`).
 

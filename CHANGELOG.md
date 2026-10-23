@@ -31,7 +31,7 @@ All notable changes to `@shieldlabs-ai/next` are documented in this file. The fo
 - Server entry `@shieldlabs-ai/next/server` for the Node.js and Edge runtimes. It imports no client code
   and no Node.js built-ins; Edge builds get the edge build of `@shieldlabs-ai/node` through its export
   conditions.
-- `getIdentification(requestId, options?)`: `identifications.get()` of `@shieldlabs-ai/node` (waits for
+- `getIdentification(identificationId, options?)`: `identifications.get()` of `@shieldlabs-ai/node` (waits for
   the verdict by default) with a client created on first use from `SHIELDLABS_API_KEY` and
   `SHIELDLABS_API_BASE_URL`, whose requests stay out of the Next.js Data Cache. Rejects with a
   `ValidationError` that names the variable when the key is missing. The `client` option takes your

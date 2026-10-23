@@ -84,7 +84,7 @@ function checkedClient(client: unknown): ShieldLabs {
  * That client sends its requests with `cache: 'no-store'`.
  */
 export async function getIdentification(
-  requestId: string,
+  identificationId: string,
   options: GetIdentificationOptions = {},
 ): Promise<Identification | null> {
   const raw: unknown = options;
@@ -93,5 +93,5 @@ export async function getIdentification(
   }
   const { client, ...getOptions } = options;
   const shieldlabs = client === undefined ? clientFromEnvironment() : checkedClient(client);
-  return shieldlabs.identifications.get(requestId, getOptions);
+  return shieldlabs.identifications.get(identificationId, getOptions);
 }

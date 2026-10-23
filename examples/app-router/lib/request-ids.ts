@@ -12,12 +12,12 @@ const REMEMBER_MS = 10 * 60 * 1000;
  * Records a request ID. Resolves to true the first time the ID is seen, and to false for every
  * repeat. Asynchronous like a call to a shared store.
  */
-export async function markRequestIdUsed(requestId: string): Promise<boolean> {
+export async function markIdentificationIdUsed(identificationId: string): Promise<boolean> {
   const now = Date.now();
   for (const [id, forgetAt] of used) {
     if (forgetAt <= now) used.delete(id);
   }
-  if (used.has(requestId)) return false;
-  used.set(requestId, now + REMEMBER_MS);
+  if (used.has(identificationId)) return false;
+  used.set(identificationId, now + REMEMBER_MS);
   return true;
 }

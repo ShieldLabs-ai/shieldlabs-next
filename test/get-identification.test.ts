@@ -22,7 +22,7 @@ import {
 } from './helpers';
 
 const [ROW] = historyRows() as [HistoryRow];
-const REQUEST_ID = ROW.request_id;
+const REQUEST_ID = ROW.identification_id;
 const empty = (): Response => historyPage([]);
 const found = (): Response => historyPage([ROW]);
 
@@ -52,10 +52,10 @@ describe('getIdentification with the client from the environment', () => {
 
     const identification = await getIdentification(REQUEST_ID, { wait: false });
 
-    expect(identification).toMatchObject({ request_id: REQUEST_ID, risk_score: 80, source: 'history' });
+    expect(identification).toMatchObject({ identification_id: REQUEST_ID, risk_score: 80, source: 'history' });
     expect(fetchFn).toHaveBeenCalledTimes(1);
     const { url, init } = callOf(fetchFn);
-    expect(url.origin + url.pathname).toBe(`https://account.shieldlabs.ai/api/v1/history/request_id/${REQUEST_ID}`);
+    expect(url.origin + url.pathname).toBe(`https://account.shieldlabs.ai/api/v1/history/identification_id/${REQUEST_ID}`);
     expect(Object.fromEntries(url.searchParams)).toEqual({ limit: '1', offset: '0' });
     expect(init.method).toBe('GET');
     expect((init.headers as Record<string, string>).Authorization).toBe(`Bearer ${API_KEY}`);
@@ -70,7 +70,7 @@ describe('getIdentification with the client from the environment', () => {
 
     const identification = await getIdentification(REQUEST_ID, { pollInterval: 10 });
 
-    expect(identification?.request_id).toBe(REQUEST_ID);
+    expect(identification?.identification_id).toBe(REQUEST_ID);
     expect(fetchFn).toHaveBeenCalledTimes(2);
   });
 
@@ -93,7 +93,7 @@ describe('getIdentification with the client from the environment', () => {
     const fetchFn = fakeFetch(found);
     vi.stubGlobal('fetch', fetchFn);
     await getIdentification(REQUEST_ID, { wait: false });
-    expect(callOf(fetchFn).url.href.startsWith('https://dev.account.shieldlabs.ai/api/v1/history/request_id/')).toBe(true);
+    expect(callOf(fetchFn).url.href.startsWith('https://dev.account.shieldlabs.ai/api/v1/history/identification_id/')).toBe(true);
   });
 
   it('trims the variables', async () => {
@@ -211,7 +211,7 @@ describe('getIdentification with a client', () => {
 
     const identification = await getIdentification(REQUEST_ID, { client, wait: false });
 
-    expect(identification?.request_id).toBe(REQUEST_ID);
+    expect(identification?.identification_id).toBe(REQUEST_ID);
     expect(clientFetch).toHaveBeenCalledTimes(1);
     expect(globalFetch).not.toHaveBeenCalled();
   });

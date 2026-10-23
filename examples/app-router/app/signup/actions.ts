@@ -1,7 +1,7 @@
 'use server';
 
 import { evaluateIdentification, getIdentification, type Evaluation, type Identification } from '@shieldlabs-ai/next/server';
-import { markRequestIdUsed } from '@/lib/request-ids';
+import { markIdentificationIdUsed } from '@/lib/request-ids';
 
 export interface SignupState {
   ok: boolean;
@@ -33,12 +33,12 @@ function refusal(verdict: Evaluation): SignupState {
 
 export async function signup(formData: FormData): Promise<SignupState> {
   const email = formData.get('email');
-  const requestId = formData.get('requestId');
+  const identificationId = formData.get('identificationId');
   if (typeof email !== 'string' || email.trim() === '') {
     return { ok: false, message: 'Enter an email address.' };
   }
   // No request ID (for example, a content blocker stopped the agent): unverified, never clean.
-  if (typeof requestId !== 'string' || requestId === '') {
+  if (typeof identificationId !== 'string' || identificationId === '') {
     console.info('[signup] refused: the form carried no request ID');
     return TRY_AGAIN;
   }
@@ -46,7 +46,7 @@ export async function signup(formData: FormData): Promise<SignupState> {
   let identification: Identification | null;
   try {
     // Waits with backoff, for up to 10 seconds, until the identification is stored and scored.
-    identification = await getIdentification(requestId);
+    identification = await getIdentification(identificationId);
   } catch (error) {
     // A malformed request ID, a missing SHIELDLABS_API_KEY or a network error. This example refuses
     // the signup when it cannot read the verdict.
@@ -57,12 +57,12 @@ export async function signup(formData: FormData): Promise<SignupState> {
   // One identification, one attempt: record the request ID before the checks, so any later submission
   // with it is refused as replayed. The store answers asynchronously and isReplay needs a boolean at
   // once, so await the store first and pass its answer.
-  const firstUse = identification !== null && (await markRequestIdUsed(identification.request_id));
+  const firstUse = identification !== null && (await markIdentificationIdUsed(identification.identification_id));
 
   // Refuses a missing, reused or stale identification, the rate-limit marker, missing device signals,
   // browser automation or disabled JavaScript, and the dangerous band. Tune the options per action.
   const verdict = evaluateIdentification(identification, { maxAge: MAX_AGE_MS, isReplay: () => !firstUse });
-  console.info('[signup]', { requestId, risk_score: identification?.risk_score ?? null, ...verdict });
+  console.info('[signup]', { identificationId, risk_score: identification?.risk_score ?? null, ...verdict });
   if (!verdict.ok) return refusal(verdict);
 
   // Create the account here.

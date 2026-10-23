@@ -74,7 +74,7 @@ describe('public types', () => {
 
   it('re-exports the React types', () => {
     expectTypeOf<ShieldLabsProviderProps>().toHaveProperty('publicKey').toEqualTypeOf<string>();
-    expectTypeOf<IdentifyResult>().toEqualTypeOf<{ requestId: string; userId: string | null }>();
+    expectTypeOf<IdentifyResult>().toEqualTypeOf<{ identificationId: string; userId: string | null }>();
   });
 
   it('the provider takes autoLoad for deferred loading', () => {

@@ -59,7 +59,7 @@ export default function SignupPage() {
     try {
       const result = await identifySubmission();
       // No identification: send the signup anyway. The server treats it as unverified.
-      if (result !== null) formData.set('requestId', result.requestId);
+      if (result !== null) formData.set('identificationId', result.identificationId);
       // The page stays open while the Server Action runs, so the agent can finish sending.
       setState(await signup(formData));
     } catch {
